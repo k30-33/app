@@ -1,1 +1,195 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Pastel Color Puzzle</title>
 
+<style>
+body {
+  font-family: "Arial Rounded MT Bold", sans-serif;
+  background: linear-gradient(135deg, #ffeef7, #e0f7ff);
+  text-align: center;
+  margin: 0;
+}
+
+h1 {
+  color: #ff8fb1;
+  margin-top: 20px;
+}
+
+p {
+  color: #888;
+}
+
+#game {
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+  margin-top: 30px;
+}
+
+.tube {
+  width: 65px;
+  height: 210px;
+  border-radius: 20px;
+  background: #ffffffaa;
+  border: 3px solid #ffd6e7;
+  display: flex;
+  flex-direction: column-reverse;
+  padding: 6px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.tube:hover {
+  transform: translateY(-5px);
+}
+
+.tube.selected {
+  box-shadow: 0 0 15px #ffb6d9;
+  border-color: #ff9ec4;
+}
+
+.block {
+  height: 25%;
+  border-radius: 10px;
+  margin: 2px 0;
+}
+
+button {
+  margin-top: 25px;
+  padding: 12px 25px;
+  background: #ffd6e7;
+  border: none;
+  border-radius: 30px;
+  font-size: 16px;
+  color: #555;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+button:hover {
+  background: #ffc2db;
+}
+
+</style>
+</head>
+
+<body>
+
+<h1>🎀 Pastel Color Puzzle</h1>
+<p>同じ色でそろえてね♡</p>
+
+<div id="game"></div>
+<button onclick="init()">🔄 リセット</button>
+
+<script>
+const COLORS = [
+  "#ffadad", // ピンク
+  "#a0c4ff", // 水色
+  "#caffbf", // ミント
+  "#ffd6a5", // オレンジ
+  "#bdb2ff"  // ラベンダー
+];
+
+const TUBE_SIZE = 4;
+
+let tubes = [];
+let selected = null;
+
+function init() {
+  let blocks = [];
+
+  COLORS.forEach(color => {
+    for (let i = 0; i < TUBE_SIZE; i++) {
+      blocks.push(color);
+    }
+  });
+
+  blocks.sort(() => Math.random() - 0.5);
+
+  tubes = [];
+  for (let i = 0; i < COLORS.length + 2; i++) {
+    tubes.push([]);
+  }
+
+  let index = 0;
+  for (let i = 0; i < COLORS.length; i++) {
+    for (let j = 0; j < TUBE_SIZE; j++) {
+      tubes[i].push(blocks[index++]);
+    }
+  }
+
+  render();
+}
+
+function render() {
+  const game = document.getElementById("game");
+  game.innerHTML = "";
+
+  tubes.forEach((tube, i) => {
+    const div = document.createElement("div");
+    div.className = "tube";
+
+    if (selected === i) div.classList.add("selected");
+
+    div.onclick = () => handleClick(i);
+
+    tube.forEach(color => {
+      const block = document.createElement("div");
+      block.className = "block";
+      block.style.background = color;
+      div.appendChild(block);
+    });
+
+    game.appendChild(div);
+  });
+}
+
+function handleClick(index) {
+  if (selected === null) {
+    if (tubes[index].length === 0) return;
+    selected = index;
+  } else {
+    move(selected, index);
+    selected = null;
+    render();
+    checkWin();
+  }
+}
+
+function move(from, to) {
+  if (from === to) return;
+
+  const source = tubes[from];
+  const target = tubes[to];
+
+  if (source.length === 0) return;
+  if (target.length >= TUBE_SIZE) return;
+
+  const color = source[source.length - 1];
+
+  if (target.length === 0 || target[target.length - 1] === color) {
+    target.push(source.pop());
+  }
+}
+
+function checkWin() {
+  let win = tubes.every(tube => {
+    if (tube.length === 0) return true;
+    return tube.every(c => c === tube[0]);
+  });
+
+  if (win) {
+    setTimeout(() => {
+      alert("🎉 クリア！すごい！");
+      init();
+    }, 100);
+  }
+}
+
+init();
+</script>
+
+</body>
+</html>
