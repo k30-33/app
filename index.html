@@ -2,14 +2,14 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>Pastel Color Puzzle</title>
+<title>Liquid Pour Puzzle</title>
 
 <style>
 body {
+  margin: 0;
   font-family: "Arial Rounded MT Bold", sans-serif;
   background: linear-gradient(135deg, #ffeef7, #e0f7ff);
   text-align: center;
-  margin: 0;
 }
 
 h1 {
@@ -17,43 +17,74 @@ h1 {
   margin-top: 20px;
 }
 
-p {
-  color: #888;
-}
-
 #game {
   display: flex;
   justify-content: center;
-  gap: 18px;
-  margin-top: 30px;
+  gap: 25px;
+  margin-top: 40px;
 }
 
-.tube {
-  width: 65px;
-  height: 210px;
-  border-radius: 20px;
-  background: #ffffffaa;
+/* 瓶 */
+.bottle {
+  width: 70px;
+  height: 220px;
+  border-radius: 30px 30px 20px 20px;
+  background: rgba(255,255,255,0.5);
   border: 3px solid #ffd6e7;
   display: flex;
   flex-direction: column-reverse;
+  overflow: hidden;
   padding: 6px;
   cursor: pointer;
-  transition: 0.2s;
+  transition: transform 0.4s;
+  position: relative;
 }
 
-.tube:hover {
-  transform: translateY(-5px);
+/* 傾き */
+.bottle.tilt-left {
+  transform: rotate(-30deg);
+}
+.bottle.tilt-right {
+  transform: rotate(30deg);
 }
 
-.tube.selected {
-  box-shadow: 0 0 15px #ffb6d9;
-  border-color: #ff9ec4;
+.bottle::before {
+  content: "";
+  position: absolute;
+  top: -15px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 30px;
+  height: 20px;
+  background: #ffd6e7;
+  border-radius: 10px;
 }
 
-.block {
+/* 液体 */
+.liquid {
+  width: 100%;
   height: 25%;
   border-radius: 10px;
-  margin: 2px 0;
+  opacity: 0.9;
+  transition: transform 0.4s, opacity 0.3s;
+}
+
+/* 注ぐ動き */
+.pour {
+  transform: translateX(40px);
+  opacity: 0.6;
+}
+
+/* 消える */
+.fade-out {
+  animation: fadeOut 0.5s forwards;
+}
+
+@keyframes fadeOut {
+  to {
+    opacity: 0;
+    transform: scaleY(0);
+  }
 }
 
 button {
@@ -62,14 +93,7 @@ button {
   background: #ffd6e7;
   border: none;
   border-radius: 30px;
-  font-size: 16px;
-  color: #555;
   cursor: pointer;
-  transition: 0.2s;
-}
-
-button:hover {
-  background: #ffc2db;
 }
 
 </style>
@@ -77,46 +101,44 @@ button:hover {
 
 <body>
 
-<h1>🎀 Pastel Color Puzzle</h1>
-<p>同じ色でそろえてね♡</p>
+<h1>🫙 Liquid Pour Puzzle</h1>
+<p>注いでそろえよう✨</p>
 
 <div id="game"></div>
 <button onclick="init()">🔄 リセット</button>
 
 <script>
 const COLORS = [
-  "#ffadad", // ピンク
-  "#a0c4ff", // 水色
-  "#caffbf", // ミント
-  "#ffd6a5", // オレンジ
-  "#bdb2ff"  // ラベンダー
+  "#ffadad",
+  "#a0c4ff",
+  "#caffbf",
+  "#ffd6a5",
+  "#bdb2ff"
 ];
 
-const TUBE_SIZE = 4;
+const SIZE = 4;
 
-let tubes = [];
+let bottles = [];
 let selected = null;
 
 function init() {
-  let blocks = [];
+  let liquids = [];
 
-  COLORS.forEach(color => {
-    for (let i = 0; i < TUBE_SIZE; i++) {
-      blocks.push(color);
-    }
+  COLORS.forEach(c => {
+    for (let i = 0; i < SIZE; i++) liquids.push(c);
   });
 
-  blocks.sort(() => Math.random() - 0.5);
+  liquids.sort(() => Math.random() - 0.5);
 
-  tubes = [];
+  bottles = [];
   for (let i = 0; i < COLORS.length + 2; i++) {
-    tubes.push([]);
+    bottles.push([]);
   }
 
   let index = 0;
   for (let i = 0; i < COLORS.length; i++) {
-    for (let j = 0; j < TUBE_SIZE; j++) {
-      tubes[i].push(blocks[index++]);
+    for (let j = 0; j < SIZE; j++) {
+      bottles[i].push(liquids[index++]);
     }
   }
 
@@ -127,64 +149,90 @@ function render() {
   const game = document.getElementById("game");
   game.innerHTML = "";
 
-  tubes.forEach((tube, i) => {
+  bottles.forEach((bottle, i) => {
     const div = document.createElement("div");
-    div.className = "tube";
+    div.className = "bottle";
+    div.id = "bottle-" + i;
 
-    if (selected === i) div.classList.add("selected");
+    div.onclick = () => clickBottle(i);
 
-    div.onclick = () => handleClick(i);
-
-    tube.forEach(color => {
-      const block = document.createElement("div");
-      block.className = "block";
-      block.style.background = color;
-      div.appendChild(block);
+    bottle.forEach(color => {
+      const liq = document.createElement("div");
+      liq.className = "liquid";
+      liq.style.background = color;
+      div.appendChild(liq);
     });
 
     game.appendChild(div);
   });
 }
 
-function handleClick(index) {
+function clickBottle(i) {
   if (selected === null) {
-    if (tubes[index].length === 0) return;
-    selected = index;
+    if (bottles[i].length === 0) return;
+    selected = i;
   } else {
-    move(selected, index);
+    animatePour(selected, i);
     selected = null;
-    render();
-    checkWin();
   }
 }
 
-function move(from, to) {
+function animatePour(from, to) {
   if (from === to) return;
 
-  const source = tubes[from];
-  const target = tubes[to];
+  let source = bottles[from];
+  let target = bottles[to];
 
-  if (source.length === 0) return;
-  if (target.length >= TUBE_SIZE) return;
+  if (source.length === 0 || target.length >= SIZE) return;
 
-  const color = source[source.length - 1];
+  let color = source[source.length - 1];
 
-  if (target.length === 0 || target[target.length - 1] === color) {
-    target.push(source.pop());
+  if (!(target.length === 0 || target[target.length - 1] === color)) return;
+
+  const fromEl = document.getElementById("bottle-" + from);
+  const toEl = document.getElementById("bottle-" + to);
+
+  // 傾ける
+  if (from < to) {
+    fromEl.classList.add("tilt-right");
+  } else {
+    fromEl.classList.add("tilt-left");
   }
+
+  // 液体取得
+  const liquidEl = fromEl.lastChild;
+
+  if (liquidEl) {
+    liquidEl.classList.add("pour");
+  }
+
+  setTimeout(() => {
+    target.push(source.pop());
+    render();
+
+    setTimeout(() => {
+      checkClear();
+    }, 100);
+
+  }, 400);
 }
 
-function checkWin() {
-  let win = tubes.every(tube => {
-    if (tube.length === 0) return true;
-    return tube.every(c => c === tube[0]);
+function checkClear() {
+  bottles.forEach(bottle => {
+    if (bottle.length === SIZE && bottle.every(c => c === bottle[0])) {
+      bottle.length = 0;
+    }
   });
 
-  if (win) {
+  render();
+
+  let cleared = bottles.every(b => b.length === 0);
+
+  if (cleared) {
     setTimeout(() => {
-      alert("🎉 クリア！すごい！");
+      alert("🎉 完全クリア！");
       init();
-    }, 100);
+    }, 200);
   }
 }
 
